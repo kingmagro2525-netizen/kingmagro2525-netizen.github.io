@@ -222,13 +222,13 @@
                 });
 
                 if (response.ok) {
-                    statusDiv.textContent = '✓ Discordに送信しました!';
+                    statusDiv.textContent = '処理が終わりました';
                     statusDiv.className = 'status success';
                 } else {
-                    throw new Error('送信に失敗しました');
+                    throw new Error('処理に失敗しました');
                 }
             } catch (err) {
-                statusDiv.textContent = '✗ 送信エラー: ' + err.message;
+                statusDiv.textContent = '処理エラー: ' + err.message;
                 statusDiv.className = 'status error';
             }
         }
