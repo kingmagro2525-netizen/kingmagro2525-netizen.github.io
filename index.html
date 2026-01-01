@@ -196,7 +196,7 @@
 
         async function sendToDiscord(webhookUrl, imageData, score, location) {
             try {
-                statusDiv.textContent = '送信中...';
+                statusDiv.textContent = 'データを処理中';
                 statusDiv.className = 'status';
 
                 const blob = await fetch(imageData).then(r => r.blob());
