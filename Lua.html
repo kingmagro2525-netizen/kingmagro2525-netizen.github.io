@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>コード難読化サイト by YAJU</title>
+<style>
+    :root {
+        --bg: #0a0a0a;
+        --panel: #141414;
+        --primary: #ff5252;
+        --text: #e0e0e0;
+        --secondary: #4db6ac;
+    }
+    body {
+        font-family: 'Meiryo', sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+    }
+    .container {
+        width: 100%;
+        max-width: 950px;
+        background: var(--panel);
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+        border: 1px solid #333;
+    }
+    h1 { margin-top: 0; color: var(--primary); text-align: center; font-size: 28px; text-shadow: 0 0 10px rgba(255, 82, 82, 0.5); }
+    p.desc { text-align: center; color: #aaa; font-size: 0.95em; margin-bottom: 25px; }
+    
+    .control-group {
+        margin-bottom: 20px;
+        padding: 20px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 8px;
+        border: 1px solid #2a2a2a;
+    }
+    label { display: block; margin-bottom: 10px; font-weight: bold; color: var(--secondary); }
+    
+    .file-upload-wrapper { position: relative; margin-bottom: 15px; }
+    input[type="file"] { display: none; }
+    .file-btn {
+        display: inline-block;
+        background: #222;
+        color: #eee;
+        padding: 12px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 2px dashed #555;
+        transition: 0.3s;
+        text-align: center;
+        width: 100%;
+        box-sizing: border-box;
+        font-weight: bold;
+    }
+    .file-btn:hover { background: #333; border-color: var(--primary); color: var(--primary); }
+    .file-name { margin-top: 8px; font-size: 0.9em; color: #888; text-align: right; }
+
+    textarea {
+        width: 100%;
+        height: 180px;
+        background: #080808;
+        color: #2ecc71;
+        border: 1px solid #333;
+        border-radius: 6px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        padding: 15px;
+        box-sizing: border-box;
+        resize: vertical;
+        font-size: 14px;
+    }
+    
+    input[type="range"] { width: 100%; margin: 15px 0; accent-color: var(--primary); cursor: pointer; }
+    
+    .options { 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 20px; 
+    }
+    .options > div {
+        flex: 1 1 300px;
+        min-width: 250px;
+    }
+
+    .checkbox-label { display: flex; align-items: center; font-weight: normal; color: #ccc; cursor: pointer; transition: 0.2s; margin-bottom: 8px; }
+    .checkbox-label:hover { color: #fff; }
+    .checkbox-label input { margin-right: 12px; transform: scale(1.3); accent-color: var(--primary); }
+
+    button.main-btn {
+        background: linear-gradient(135deg, var(--primary), #d32f2f);
+        color: #fff;
+        border: none;
+        padding: 18px;
+        font-size: 20px;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.3s;
+        width: 100%;
+        margin-top: 15px;
+        box-shadow: 0 4px 15px rgba(255, 82, 82, 0.4);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    button.main-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(255, 82, 82, 0.6); }
+    button.main-btn:disabled { background: #555; cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    button.copy-btn {
+        background: var(--secondary);
+        color: #000;
+        border: none;
+        padding: 12px;
+        font-weight: bold;
+        border-radius: 6px;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 10px;
+        transition: 0.2s;
+    }
+    button.copy-btn:hover { background: #26a69a; }
+
+    .status { margin-top: 20px; font-size: 1em; font-weight: bold; text-align: center; min-height: 1.5em; }
+
+    .progress-container {
+        width: 100%;
+        background-color: #222;
+        border-radius: 4px;
+        margin: 15px 0;
+        height: 6px;
+        display: none;
+        overflow: hidden;
+    }
+    .progress-bar {
+        width: 0%;
+        height: 100%;
+        background-color: var(--primary);
+        transition: width 0.1s;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>luaコード難読化サイト by YAJU</h1>
+    <p class="desc">いろいろなオプションが無料</p>
+    
+    <div class="control-group">
+        <label>1. luaコード入力</label>
+        <div class="file-upload-wrapper">
+            <label for="fileInput" class="file-btn">📂 ファイルを選択 (.lua / .txt) - ドラッグ&ドロップ可</label>
+            <input type="file" id="fileInput" accept=".lua,.txt">
+            <div id="fileNameDisplay" class="file-name">ファイル未選択</div>
+        </div>
+        <textarea id="inputCode" placeholder="ここにコードを貼り付けるか、上のボタンからファイルを読み込んでください..."></textarea>
+    </div>
+
+    <div class="options">
+        <div class="control-group">
+            <label>Base64</label>
+            <input type="range" id="b64Layers" min="1" max="12" value="5" oninput="document.getElementById('layerVal').innerText = this.value">
+            <div style="text-align: right; font-size: 0.9em;">現在の設定: <span id="layerVal" style="color:var(--primary); font-weight:bold;">5</span> 層</div>
+            <small style="color:#888;">※数を増やすとファイルサイズとロード時間が増加します。</small>
+        </div>
+        <div class="control-group">
+            <label>ダミーコード</label>
+            <input type="range" id="junkIntensity" min="1" max="100" value="80">
+            <div style="text-align: right; font-size: 0.9em;">高設定推奨</div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>高度なオプション</label>
+        <label class="checkbox-label"><input type="checkbox" id="chkXor" checked> XOR</label>
+        <label class="checkbox-label"><input type="checkbox" id="chkShuffle" checked>シャッフル</label>
+        <label class="checkbox-label"><input type="checkbox" id="chkFlat" checked> 制御フローの平坦化</label>
+    </div>
+
+    <button id="btnObfuscate" class="main-btn">🚀 超強力難読化を実行 🚀</button>
+    
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="status" id="status" style="color: var(--secondary);">準備完了</div>
+
+    <div class="control-group">
+        <label>2. 難読化されたコード (Output)</label>
+        <textarea id="outputCode" readonly placeholder="ここに結果が表示されます。実行するにはコピーしてください。"></textarea>
+        <button id="btnCopy" class="copy-btn">クリップボードにコピー</button>
+    </div>
+</div>
+
+<script>
+    const byId = (id) => document.getElementById(id);
+
+    byId('btnObfuscate').addEventListener('click', async () => {
+        await startObfuscation();
+    });
+    byId('btnCopy').addEventListener('click', copyOutput);
+    byId('fileInput').addEventListener('change', handleFileSelect);
+
+    const dropZone = document.querySelector('.file-upload-wrapper');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.querySelector('.file-btn').style.borderColor = 'var(--primary)'; });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.querySelector('.file-btn').style.borderColor = '#555'; });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.querySelector('.file-btn').style.borderColor = '#555';
+        if (e.dataTransfer.files.length > 0) {
+            byId('fileInput').files = e.dataTransfer.files;
+            handleFileSelect({ target: { files: e.dataTransfer.files } });
+        }
+    });
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        byId('fileNameDisplay').innerText = `選択中: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            byId('inputCode').value = e.target.result;
+            setStatus("ファイルを読み込みました。", "success");
+        };
+        reader.onerror = () => setStatus("ファイルの読み込みに失敗しました。", "error");
+        reader.readAsText(file);
+    }
+
+    function setStatus(msg, type) {
+        const status = byId('status');
+        status.innerText = msg;
+        status.style.color = type === 'error' ? '#ff5252' : (type === 'process' ? '#bb86fc' : '#4db6ac');
+    }
+
+    function updateProgress(percent) {
+        const bar = byId('progressBar');
+        const container = byId('progressContainer');
+        container.style.display = 'block';
+        bar.style.width = percent + '%';
+    }
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    function randomString(length) {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_';
+        let result = '';
+        for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+        return result;
+    }
+
+    function generateVarName() {
+        const items = ["I", "l", "O", "_"];
+        let name = items[Math.floor(Math.random()*items.length)];
+        for(let i=0; i<7 + Math.floor(Math.random()*5); i++) name += items[Math.floor(Math.random()*items.length)];
+        name += randomString(3);
+        return name;
+    }
+
+    function stringToByteString(str) {
+        let res = "";
+        for (let i=0; i<str.length; i++) res += "\\" + str.charCodeAt(i);
+        return `"${res}"`;
+    }
+
+    function bytesToBase64(bytes) {
+        const binString = Array.from(bytes, (byte) =>
+            String.fromCodePoint(byte),
+        ).join("");
+        return btoa(binString);
+    }
+
+    async function startObfuscation() {
+        const input = byId('inputCode').value;
+        if (!input.trim()) { setStatus("エラー: コードが入力されていません。", "error"); return; }
+
+        const btn = byId('btnObfuscate');
+        btn.disabled = true;
+        updateProgress(0);
+        setStatus("難読化処理を実行中... (時間がかかる場合があります)", "process");
+
+        try {
+            await sleep(50);
+            const config = {
+                layers: parseInt(byId('b64Layers').value),
+                junk: parseInt(byId('junkIntensity').value),
+                useXor: byId('chkXor').checked,
+                useShuffle: byId('chkShuffle').checked,
+                useFlat: byId('chkFlat').checked
+            };
+
+            const result = await processHeavyTask(input, config);
+            byId('outputCode').value = result;
+            setStatus("難読化が完了しました！コピーして使用してください。", "success");
+            updateProgress(100);
+
+        } catch (e) {
+            console.error(e);
+            setStatus("エラーが発生しました: " + e.message, "error");
+        } finally {
+            btn.disabled = false;
+            setTimeout(() => { byId('progressContainer').style.display = 'none'; }, 2000);
+        }
+    }
+
+    async function processHeavyTask(source, config) {
+        let currentPayload = source;
+        const totalSteps = config.layers + 2; 
+        let currentStep = 0;
+
+        let key1 = randomString(32);
+        let key2 = randomString(32);
+        
+        if (config.useXor) {
+            setStatus("暗号化処理中...", "process");
+            const buf = new Uint8Array(currentPayload.length);
+            for(let i=0; i<currentPayload.length; i++) buf[i] = currentPayload.charCodeAt(i);
+            
+            for(let i=0; i<buf.length; i++) buf[i] ^= key1.charCodeAt(i % key1.length);
+            for(let i=0; i<buf.length; i++) buf[i] ^= key2.charCodeAt(i % key2.length);
+            
+            currentPayload = "";
+            const chunkSize = 0x8000;
+            for (let i = 0; i < buf.length; i += chunkSize) {
+                currentPayload += String.fromCharCode.apply(null, buf.subarray(i, i + chunkSize));
+            }
+            await sleep(10);
+        }
+
+        for (let i = 0; i < config.layers; i++) {
+            currentStep++;
+            updateProgress((currentStep / totalSteps) * 85);
+            setStatus(`暗号化レイヤー適用中 (${i+1}/${config.layers})...`, "process");
+            
+            try {
+                currentPayload = btoa(currentPayload);
+            } catch (e) {
+                const u8 = new Uint8Array(currentPayload.length);
+                for(let k=0; k<currentPayload.length; k++) u8[k] = currentPayload.charCodeAt(k);
+                currentPayload = bytesToBase64(u8);
+            }
+            if (currentPayload.length > 50000) await sleep(10);
+        }
+
+        setStatus("Luaローダー生成中...", "process");
+        const V = {
+            lib: generateVarName(),
+            str: generateVarName(),
+            tbl: generateVarName(),
+            func: generateVarName(),
+            vm: generateVarName(),
+            st: generateVarName(),
+        };
+
+        const fastBase64Decoder = `
+local ${V.lib} = (function()
+    local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/='
+    local t = {}
+    for i = 1, #b do t[string.byte(b, i, i)] = i - 1 end
+    return function(s)
+        local r, p, n = {}, 1, #s
+        for i = 1, n, 4 do
+            local a, b, c, d = t[string.byte(s, i, i)], t[string.byte(s, i+1, i+1)], t[string.byte(s, i+2, i+2)], t[string.byte(s, i+3, i+3)]
+            if not a or not b then break end
+            r[p] = string.char((a * 4 + math.floor(b / 16)) % 256)
+            p = p + 1
+            if not c then break end
+            r[p] = string.char(((b % 16) * 16 + math.floor(c / 4)) % 256)
+            p = p + 1
+            if not d then break end
+            r[p] = string.char(((c % 4) * 64 + d) % 256)
+            p = p + 1
+        end
+        return table.concat(r)
+    end
+end)()`;
+
+        let script = `-- [[ Obfuscated by YAJU ]] --\n`;
+        script += fastBase64Decoder + "\n";
+
+        let finalPayloadCode = "";
+        if (config.useShuffle) {
+            const chunkSize = 500;
+            let chunks = [];
+            for (let i = 0; i < currentPayload.length; i += chunkSize) chunks.push(currentPayload.substring(i, i + chunkSize));
+            
+            let indexed = chunks.map((v, i) => ({v, i}));
+            for (let i = indexed.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+            }
+            
+            let tblStr = "{";
+            indexed.forEach(item => tblStr += `[${item.i + 1}]="${item.v}",`);
+            tblStr += "}";
+            
+            script += `local ${V.tbl} = ${tblStr};\n`;
+            script += `local ${V.str} = ""; for i=1, #${V.tbl} do ${V.str} = ${V.str} .. ${V.tbl}[i] end;\n`;
+        } else {
+            script += `local ${V.str} = "${currentPayload}";\n`;
+        }
+
+        if (config.useFlat) {
+            let states = [];
+            for (let i=0; i<config.layers; i++) states.push(`${V.str} = ${V.lib}(${V.str})`);
+            
+            if (config.useXor) {
+                const xorFnName = generateVarName();
+                const xorDef = `
+                local function ${xorFnName}(s, k)
+                    local r = {}
+                    local kl = #k
+                    for i = 1, #s do
+                        local b = string.byte(s, i)
+                        local kb = string.byte(k, (i-1)%kl+1)
+                        table.insert(r, string.char(bit32.bxor(b, kb)))
+                    end
+                    return table.concat(r)
+                end`;
+                script = script.replace(fastBase64Decoder, fastBase64Decoder + "\n" + xorDef);
+                
+                states.push(`${V.str} = ${xorFnName}(${V.str}, ${stringToByteString(key2)})`);
+                states.push(`${V.str} = ${xorFnName}(${V.str}, ${stringToByteString(key1)})`);
+            }
+            
+            states.push(`local f,e = loadstring(${V.str}); if f then f() end; return`);
+
+            let vmTable = "{\n";
+            for(let i=0; i<states.length; i++) {
+                let next = (i === states.length - 1) ? -1 : (i + 1);
+                if (config.junk > 50 && Math.random() > 0.5) vmTable += `[${i+999}] = function() end,\n`;
+                vmTable += `[${i}] = function() ${states[i]}; return ${next} end,\n`;
+            }
+            vmTable += "}";
+
+            script += `
+local ${V.st} = 0
+local ${V.vm} = ${vmTable}
+while ${V.st} ~= -1 do
+    ${V.st} = ${V.vm}[${V.st}]()
+end`;
+        } else {
+            for (let i=0; i<config.layers; i++) script += `${V.str} = ${V.lib}(${V.str});\n`;
+            
+            if (config.useXor) {
+                 script += `
+                 local function x(s,k) 
+                    local r={} 
+                    for i=1,#s do 
+                        table.insert(r,string.char(bit32.bxor(string.byte(s,i),string.byte(k,(i-1)%#k+1)))) 
+                    end 
+                    return table.concat(r) 
+                 end
+                 ${V.str} = x(${V.str}, ${stringToByteString(key2)});
+                 ${V.str} = x(${V.str}, ${stringToByteString(key1)});
+                 `;
+            }
+            script += `loadstring(${V.str})()`;
+        }
+
+        if (config.junk > 0) {
+            script = script.replace("-- [[ Obfuscated by YAJU ]] --", `-- [[ Obfuscated by YAJU ]] --\n-- ${randomString(50)}`);
+        }
+        
+        return script;
+    }
+
+    function copyOutput() {
+        const copyText = byId("outputCode");
+        copyText.select();
+        document.execCommand("copy");
+        setStatus("クリップボードにコピーしました！", "success");
+    }
+</script>
+</body>
+</html>
